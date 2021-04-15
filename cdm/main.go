@@ -14,6 +14,17 @@ type Download struct {
 }
 
 func (download Download) DownloadFile() error {
+	fmt.Printf("Starting the connection...\n")
+	
+	request, err := download.getHttpRequest("HEAD")
+	if err != nil {
+		return err
+	}
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("HTTP response status code %v\n", response.StatusCode)
 	return nil
 }
 
@@ -21,7 +32,7 @@ func (download Download) getHttpRequest(method string) (*http.Request, error) {
 	request, err := http.NewRequest(
 		method,
 		download.URL,
-		nil
+		nil,
 	)
 	if err != nil {
 		return nil, err
