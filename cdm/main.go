@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"net/http"
 )
 
 type Download struct {
@@ -12,9 +13,23 @@ type Download struct {
 	TotalConnections int
 }
 
-func (download Download) Do() error {
+func (download Download) DownloadFile() error {
 	return nil
 }
+
+func (download Download) getHttpRequest(method string) (*http.Request, error) {
+	request, err := http.NewRequest(
+		method,
+		download.URL,
+		nil
+	)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("User-Agent", "Concurrent Download Manager v1.0")
+	return request, nil
+}
+
 
 func main()  {
 	startTime := time.Now()
@@ -23,7 +38,7 @@ func main()  {
 		Path: "lec4.mp4",
 		TotalConnections: 10,
 	}
-	err := download.Do()
+	err := download.DownloadFile()
 	if err != nil {
 		log.Printf("An error occured while downloading the file: %s\n", err)
 	}
