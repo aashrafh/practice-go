@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -56,9 +57,18 @@ func (download Download) DownloadFile() error {
 		}
 	}
 
-	// for i, connection := range connections {
-
-	// }
+	var procGroup sync.WaitGroup
+	for i, connection := range connections {
+		procGroup.Add(1)
+		go func(i int, connection [2]int) {
+			defer procGroup.Done()
+			err = download.downloadChunk(i, connection)
+			if err != nil {
+				panic(err)
+			}
+		}(i, connection)
+	}
+	procGroup.Wait()
 
 	return nil
 }
@@ -108,7 +118,7 @@ func (download Download) downloadChunk(i int, connection [2]int) error {
 func main() {
 	startTime := time.Now()
 	download := Download{
-		URL:              "https://d1os9znak2uyeg.cloudfront.net/content/b49d56d8-0640-5c1f-9614-022c53992031/21/04/15/08/b49d56d8-0640-5c1f-9614-022c53992031_1_210415T084737293Z.mp4?Expires=1618571777&Signature=d3Vyplv36Dvj3Vws8e9MejEwIIjkIoEhlcHezVSoYZuY12in6MfaTFyFtlrftXfhEzpu9Id~v0Ik6kEJBdQZFvEzmZDPJSCzyFQ7OfFzmF-1MIYE~35lLdrmALXF3iAv9tggwZgrDKFyxUEGzN~~PpIiRY6URa6JQiU30gYfgrHYmW6UPfTitQGLckHpX2wxUU6qHk9zB1by8-RTXA0e8wzXdRXz8SAvmJSepi~WN9RjQ1-yUrk40cHvFH2pOyRA8ka8cIRdU1xsg0FqCyKjl51aH5HrWpf~tuJJOFRlQrJmNT8m9k8z9zX82tvkZSXTu7XD8Y5kfyOUcSCEFPlV7w__&Key-Pair-Id=APKAIOBDBIMXUOQOBYVA",
+		URL:              "https://d1os9znak2uyeg.cloudfront.net/content/04846b59-0840-5c1f-81d5-022c53992031/21/04/15/09/04846b59-0840-5c1f-81d5-022c53992031_1_210415T091101027Z.mp4?Expires=1618647615&Signature=ZkOBax~0Lijxxmy~JvrGZlWa9Qh4Q44gYteYG1ui8MrZWjTCZSAnWjPJKU8VYdCvAIHucFPLn6tNFz~S83fL7-n17vq-dsYJaram0ccrdC7GjccRMSBzAWBxZo3oMTouuLvqcJBG6qNCd8gag-Hn3P2ben9uMmVssyAm7W2pgf7vxQUb4KpVJ72CgtNkgo4fKTKIXyu-kSMwwYhtHTD-NslJxnflZTACoZjVr~-H3DxyPT7~yKlz63rhZJ6QDZ83Mh~F5mhC9G~Hkhx6tGFYp7fMovihtVghmNZatOP0pblU7Ef9bpisEFgiYO5p4~yA8e1rlbLw3~n-TDoZ7EJy7g__&Key-Pair-Id=APKAIOBDBIMXUOQOBYVA",
 		Path:             "lec4.mp4",
 		TotalConnections: 10,
 	}
