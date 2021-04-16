@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 	"net/http"
+	"errors"
+	"strconv"
 )
 
 type Download struct {
@@ -24,7 +26,18 @@ func (download Download) DownloadFile() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("HTTP response status code %v\n", response.StatusCode)
+	if response.StatusCode > 299 {
+		return errors.New(fmt.Sprintf("Failed to process the request, %v error", response.StatusCode))
+	} else {
+		fmt.Printf("HTTP response status code %v\n", response.StatusCode)
+	}
+
+	size, err := strconv.Atoi(response.Header.Get("Content-Length"))
+	if err != nil{
+		return err
+	}
+	fmt.Printf("Size of the file = %v bytes\n", size)
+
 	return nil
 }
 
