@@ -70,7 +70,7 @@ func (download Download) DownloadFile() error {
 	}
 	procGroup.Wait()
 
-	return nil
+	return download.mergeChunks(connections)
 }
 
 func (download Download) getHttpRequest(method string) (*http.Request, error) {
@@ -112,6 +112,35 @@ func (download Download) downloadChunk(i int, connection [2]int) error {
 		return nil
 	}
 
+	return nil
+}
+
+func (download Download) mergeChunks(connections [][2]int) error {
+	file, err := os.OpenFile(download.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	for i := range connections {
+		name := fmt.Sprintf("chunk-%v.tmp", i)
+		bytes, err := ioutil.ReadFile(name)
+		if err != nil {
+			return err
+		}
+
+		total, err := file.Write(bytes)
+		if err != nil {
+			return err
+		}
+
+		err = os.Remove(name)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("%v bytes has downloaded and merged\n", total)
+	}
 	return nil
 }
 
