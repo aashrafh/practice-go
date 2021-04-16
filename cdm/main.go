@@ -1,23 +1,23 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
-	"time"
 	"net/http"
-	"errors"
 	"strconv"
+	"time"
 )
 
 type Download struct {
-	URL string
-	Path string
+	URL              string
+	Path             string
 	TotalConnections int
 }
 
 func (download Download) DownloadFile() error {
 	fmt.Printf("Starting the connection...\n")
-	
+
 	request, err := download.getHttpRequest("HEAD")
 	if err != nil {
 		return err
@@ -33,10 +33,26 @@ func (download Download) DownloadFile() error {
 	}
 
 	size, err := strconv.Atoi(response.Header.Get("Content-Length"))
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	fmt.Printf("Size of the file = %v bytes\n", size)
+
+	connections := make([][2]int, download.TotalConnections)
+	connectionSize := size / download.TotalConnections
+	for i := range connections {
+		if i == 0 {
+			connections[i][0] = 0
+		} else {
+			connections[i][0] = connections[i-1][1] + 1
+		}
+
+		if i == download.TotalConnections-1 {
+			connections[i][1] = size - 1
+		} else {
+			connections[i][1] = connections[i][0] + connectionSize
+		}
+	} 
 
 	return nil
 }
@@ -54,12 +70,11 @@ func (download Download) getHttpRequest(method string) (*http.Request, error) {
 	return request, nil
 }
 
-
-func main()  {
+func main() {
 	startTime := time.Now()
 	download := Download{
-		URL: "https://d1os9znak2uyeg.cloudfront.net/content/b49d56d8-0640-5c1f-9614-022c53992031/21/04/15/08/b49d56d8-0640-5c1f-9614-022c53992031_1_210415T084737293Z.mp4?Expires=1618571777&Signature=d3Vyplv36Dvj3Vws8e9MejEwIIjkIoEhlcHezVSoYZuY12in6MfaTFyFtlrftXfhEzpu9Id~v0Ik6kEJBdQZFvEzmZDPJSCzyFQ7OfFzmF-1MIYE~35lLdrmALXF3iAv9tggwZgrDKFyxUEGzN~~PpIiRY6URa6JQiU30gYfgrHYmW6UPfTitQGLckHpX2wxUU6qHk9zB1by8-RTXA0e8wzXdRXz8SAvmJSepi~WN9RjQ1-yUrk40cHvFH2pOyRA8ka8cIRdU1xsg0FqCyKjl51aH5HrWpf~tuJJOFRlQrJmNT8m9k8z9zX82tvkZSXTu7XD8Y5kfyOUcSCEFPlV7w__&Key-Pair-Id=APKAIOBDBIMXUOQOBYVA",
-		Path: "lec4.mp4",
+		URL:              "https://d1os9znak2uyeg.cloudfront.net/content/b49d56d8-0640-5c1f-9614-022c53992031/21/04/15/08/b49d56d8-0640-5c1f-9614-022c53992031_1_210415T084737293Z.mp4?Expires=1618571777&Signature=d3Vyplv36Dvj3Vws8e9MejEwIIjkIoEhlcHezVSoYZuY12in6MfaTFyFtlrftXfhEzpu9Id~v0Ik6kEJBdQZFvEzmZDPJSCzyFQ7OfFzmF-1MIYE~35lLdrmALXF3iAv9tggwZgrDKFyxUEGzN~~PpIiRY6URa6JQiU30gYfgrHYmW6UPfTitQGLckHpX2wxUU6qHk9zB1by8-RTXA0e8wzXdRXz8SAvmJSepi~WN9RjQ1-yUrk40cHvFH2pOyRA8ka8cIRdU1xsg0FqCyKjl51aH5HrWpf~tuJJOFRlQrJmNT8m9k8z9zX82tvkZSXTu7XD8Y5kfyOUcSCEFPlV7w__&Key-Pair-Id=APKAIOBDBIMXUOQOBYVA",
+		Path:             "lec4.mp4",
 		TotalConnections: 10,
 	}
 	err := download.DownloadFile()
