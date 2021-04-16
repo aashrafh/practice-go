@@ -3,8 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
@@ -52,7 +54,11 @@ func (download Download) DownloadFile() error {
 		} else {
 			connections[i][1] = connections[i][0] + connectionSize
 		}
-	} 
+	}
+
+	// for i, connection := range connections {
+
+	// }
 
 	return nil
 }
@@ -68,6 +74,35 @@ func (download Download) getHttpRequest(method string) (*http.Request, error) {
 	}
 	request.Header.Set("User-Agent", "Concurrent Download Manager v1.0")
 	return request, nil
+}
+
+func (download Download) downloadChunk(i int, connection [2]int) error {
+	request, err := download.getHttpRequest("GET")
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("Range", fmt.Sprintf("bytes=%v-%v", connection[0], connection[1]))
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return err
+	}
+	if response.StatusCode > 299 {
+		return errors.New(fmt.Sprintf("Failed to process the request, %v error", response.StatusCode))
+	} else {
+		fmt.Printf("Downloaded %v bytes  for connection %v\n", response.Header.Get("Content-Length"), i)
+	}
+
+	bytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(fmt.Sprintf("chunk-%v.tmp", i), bytes, os.ModePerm)
+	if err != nil {
+		return nil
+	}
+
+	return nil
 }
 
 func main() {
