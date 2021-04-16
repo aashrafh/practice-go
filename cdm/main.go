@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -145,10 +146,21 @@ func (download Download) mergeChunks(connections [][2]int) error {
 }
 
 func main() {
+	urlPtr := flag.String("url", "", "A link to the file to be downloaded")
+	pathPtr := flag.String("path", "download.tmp", "The path to store the downloaded file")
+	flag.Parse()
+
+	if *urlPtr == "" {
+		log.Printf("URL of the file is empty, please try again with a valid URL\n")
+		os.Exit(1)
+	}
+
+	// fmt.Printf("url: %s\n", *urlPtr)
+	// fmt.Printf("path: %s\n", *pathPtr)
 	startTime := time.Now()
 	download := Download{
-		URL:              "https://d1os9znak2uyeg.cloudfront.net/content/04846b59-0840-5c1f-81d5-022c53992031/21/04/15/09/04846b59-0840-5c1f-81d5-022c53992031_1_210415T091101027Z.mp4?Expires=1618647615&Signature=ZkOBax~0Lijxxmy~JvrGZlWa9Qh4Q44gYteYG1ui8MrZWjTCZSAnWjPJKU8VYdCvAIHucFPLn6tNFz~S83fL7-n17vq-dsYJaram0ccrdC7GjccRMSBzAWBxZo3oMTouuLvqcJBG6qNCd8gag-Hn3P2ben9uMmVssyAm7W2pgf7vxQUb4KpVJ72CgtNkgo4fKTKIXyu-kSMwwYhtHTD-NslJxnflZTACoZjVr~-H3DxyPT7~yKlz63rhZJ6QDZ83Mh~F5mhC9G~Hkhx6tGFYp7fMovihtVghmNZatOP0pblU7Ef9bpisEFgiYO5p4~yA8e1rlbLw3~n-TDoZ7EJy7g__&Key-Pair-Id=APKAIOBDBIMXUOQOBYVA",
-		Path:             "lec4.mp4",
+		URL:              *urlPtr,
+		Path:             *pathPtr,
 		TotalConnections: 10,
 	}
 	err := download.DownloadFile()
