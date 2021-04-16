@@ -40,7 +40,7 @@ func (download Download) DownloadFile() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Size of the file = %v bytes\n", size)
+	fmt.Printf("Size of the file = %.2f MiB\n", float64(size)/1048576.0)
 
 	connections := make([][2]int, download.TotalConnections)
 	connectionSize := size / download.TotalConnections
@@ -100,8 +100,6 @@ func (download Download) downloadChunk(i int, connection [2]int) error {
 	}
 	if response.StatusCode > 299 {
 		return errors.New(fmt.Sprintf("Failed to process the request, %v error", response.StatusCode))
-	} else {
-		fmt.Printf("Downloaded %v bytes  for connection %v\n", response.Header.Get("Content-Length"), i)
 	}
 
 	bytes, err := ioutil.ReadAll(response.Body)
@@ -155,8 +153,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// fmt.Printf("url: %s\n", *urlPtr)
-	// fmt.Printf("path: %s\n", *pathPtr)
 	startTime := time.Now()
 	download := Download{
 		URL:              *urlPtr,
