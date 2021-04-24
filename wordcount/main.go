@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -11,7 +10,7 @@ import (
 
 const totalDivisions = 5
 
-func processInput(filename string) {
+func processInput(filename string) ([]string, int) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -41,12 +40,24 @@ func processInput(filename string) {
 
 	text = strings.ToLower(text)
 	words := strings.Split(text, " ")
-	chunkSize := len(words)/5
+	chunkSize := len(words) / 5
+	// fmt.Printf("Total size %v and division %v and the remainder %v\n", len(words), len(words)/5, len(words)%5)
 
-	// for _, v := range words {
-	// 	fmt.Println(v)
-	// }
-	fmt.Printf("Total size %v and division %v and the remainder %v\n", len(words), len(words)/5, len(words)%5)
+	return words, chunkSize
+}
+
+func countWords(words []string, output chan map[string]int) {
+	counts := make(map[string]int)
+	for _, word := range words {
+		_, ok := counts[word]
+		if ok {
+			counts[word] += 1
+		} else {
+			counts[word] = 1
+		}
+	}
+
+	output <- counts
 }
 
 func main() {
