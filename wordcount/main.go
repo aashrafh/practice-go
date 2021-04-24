@@ -2,13 +2,20 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
+	"sync"
 )
 
 const totalDivisions = 5
+
+type shmMap struct {
+	mtx    sync.Mutex
+	counts map[string]int
+}
 
 func processInput(filename string) ([]string, int) {
 	file, err := os.Open(filename)
@@ -46,20 +53,44 @@ func processInput(filename string) ([]string, int) {
 	return words, chunkSize
 }
 
-func countWords(words []string, output chan map[string]int) {
-	counts := make(map[string]int)
+func countWords(words []string, i int, mp *shmMap) {
+	mp.mtx.Lock()
+	defer mp.mtx.Unlock()
+	fmt.Printf("Proc %v\n", i)
 	for _, word := range words {
-		_, ok := counts[word]
+		_, ok := mp.counts[word]
 		if ok {
-			counts[word] += 1
+			mp.counts[word] += 1
 		} else {
-			counts[word] = 1
+			mp.counts[word] = 1
 		}
 	}
 
-	output <- counts
+	fmt.Println(mp.counts)
+}
+
+func Reducer(words []string, chunkSize int) {
+	mp := shmMap{counts: make(map[string]int)}
+
+	var procGroup sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		procGroup.Add(1)
+		start := i * chunkSize
+		var end int
+		if end = (i + 1) * chunkSize; i == 4 {
+			end = len(words)
+		}
+		go func(words []string, i int, mp *shmMap) {
+			defer procGroup.Done()
+			countWords(words, i, mp)
+		}(words[start:end], i, &mp)
+	}
+	procGroup.Wait()
+
+	fmt.Println(mp.counts)
 }
 
 func main() {
-	processInput("ex_input.txt")
+	words, chunkSize := processInput("ex_input.txt")
+	Reducer(words, chunkSize)
 }
