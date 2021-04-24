@@ -3,21 +3,35 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 )
 
 const totalDivisions = 5
 
-type shmMap struct {
+type shMap struct {
 	mtx    sync.Mutex
 	counts map[string]int
 }
+type Pair struct {
+	key   string
+	value int
+}
+type PairList []Pair
 
-func processInput(filename string) ([]string, int) {
+func (p PairList) Len() int      { return len(p) }
+func (p PairList) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+func (p PairList) Less(i, j int) bool {
+	if p[i].value == p[j].value {
+		return p[i].key < p[j].key
+	}
+	return p[i].value > p[j].value
+}
+
+func processInput(filename string) []string {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -29,34 +43,25 @@ func processInput(filename string) ([]string, int) {
 		}
 	}()
 
-	text := ""
-
-	buf := make([]byte, 32*1024)
-	reader := bufio.NewReader(file)
-
-	for {
-		n, err := reader.Read(buf)
-		if err != nil {
-			if err != io.EOF {
-				log.Fatal(err)
-			}
-			break
-		}
-		text += string(buf[:n])
+	var words []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = string(line)
+		line = strings.ToLower(line)
+		wordsSeperated := strings.Split(line, " ")
+		words = append(words, wordsSeperated...)
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
 	}
 
-	text = strings.ToLower(text)
-	words := strings.Split(text, " ")
-	chunkSize := len(words) / 5
-	// fmt.Printf("Total size %v and division %v and the remainder %v\n", len(words), len(words)/5, len(words)%5)
-
-	return words, chunkSize
+	return words
 }
 
-func countWords(words []string, i int, mp *shmMap) {
+func countWords(words []string, i int, mp *shMap) {
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
-	fmt.Printf("Proc %v\n", i)
 	for _, word := range words {
 		_, ok := mp.counts[word]
 		if ok {
@@ -65,12 +70,53 @@ func countWords(words []string, i int, mp *shmMap) {
 			mp.counts[word] = 1
 		}
 	}
-
-	fmt.Println(mp.counts)
 }
 
-func Reducer(words []string, chunkSize int) {
-	mp := shmMap{counts: make(map[string]int)}
+func sortMap(mp map[string]int) []string {
+	pairs := make(PairList, len(mp))
+
+	i := 0
+	for key, value := range mp {
+		pairs[i] = Pair{key, value}
+		i++
+	}
+
+	sort.Sort(pairs)
+
+	var result []string
+	for _, k := range pairs {
+		result = append(result, k.key)
+	}
+
+	return result
+}
+
+func writeResult(fileName string, counts map[string]int, sortedKeys []string) {
+	f, err := os.Create(fileName)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	for _, key := range sortedKeys {
+		_, err := f.WriteString(fmt.Sprintf("%v : %v \n", key, counts[key]))
+		if err != nil {
+			fmt.Println(err)
+			f.Close()
+			return
+		}
+	}
+
+	err = f.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
+
+func Reducer(words []string) {
+	chunkSize := len(words) / 5
+	mp := shMap{counts: make(map[string]int)}
 
 	var procGroup sync.WaitGroup
 	for i := 0; i < 5; i++ {
@@ -80,17 +126,18 @@ func Reducer(words []string, chunkSize int) {
 		if end = (i + 1) * chunkSize; i == 4 {
 			end = len(words)
 		}
-		go func(words []string, i int, mp *shmMap) {
+		go func(words []string, i int, mp *shMap) {
 			defer procGroup.Done()
 			countWords(words, i, mp)
 		}(words[start:end], i, &mp)
 	}
 	procGroup.Wait()
 
-	fmt.Println(mp.counts)
+	sortedKeys := sortMap(mp.counts)
+	writeResult("output.txt", mp.counts, sortedKeys)
 }
 
 func main() {
-	words, chunkSize := processInput("ex_input.txt")
-	Reducer(words, chunkSize)
+	words := processInput("ex_input.txt")
+	Reducer(words)
 }
