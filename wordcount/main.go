@@ -134,10 +134,10 @@ func Reducer(words []string) {
 	procGroup.Wait()
 
 	sortedKeys := sortMap(mp.counts)
-	writeResult("output.txt", mp.counts, sortedKeys)
+	writeResult("WordCountOutput.txt", mp.counts, sortedKeys)
 }
 
 func main() {
-	words := processInput("ex_input.txt")
+	words := processInput("test.txt")
 	Reducer(words)
 }
