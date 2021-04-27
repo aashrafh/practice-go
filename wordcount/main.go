@@ -60,15 +60,15 @@ func processInput(filename string) []string {
 }
 
 func countWords(words []string, i int, mp *shMap) {
-	mp.mtx.Lock()
-	defer mp.mtx.Unlock()
 	for _, word := range words {
+		mp.mtx.Lock()
 		_, ok := mp.counts[word]
 		if ok {
 			mp.counts[word] += 1
 		} else {
 			mp.counts[word] = 1
 		}
+		mp.mtx.Unlock()
 	}
 }
 
