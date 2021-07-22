@@ -80,6 +80,42 @@ func main() {
 		return c.JSON(products)
 	})
 
+	app.Get("/api/products/backend", func(c *fiber.Ctx) error {
+		collection := client.Database("seeker").Collection("products")
+		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		var products []Product
+
+		filter := bson.M{}
+		findOptions := options.Find()
+
+		if s := c.Query("search"); s != "" {
+			filter = bson.M{
+				"$or": []bson.M{
+					{
+						"title": bson.M{
+							"$regex": primitive.Regex{
+								Pattern: s,
+								Options: "i",
+							},
+						},
+					},
+					{
+						"description": bson.M{
+							"$regex": primitive.Regex{
+								Pattern: s,
+								Options: "i",
+							},
+						},
+					},
+				},
+			}
+		}
+
+		return c.JSON(products)
+	})
+
 	app.Listen(":3000")
 
 }
