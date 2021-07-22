@@ -126,11 +126,13 @@ func main() {
 		page, _ := strconv.Atoi(c.Query("page", "1"))
 		var perPage int64 = 9
 		total, _ := collection.CountDocuments(ctx, filter)
-
-		findOptions.SetSkip(int64(page) - 1*perPage)
+		findOptions.SetSkip((int64(page) - 1) * perPage)
 		findOptions.SetLimit(perPage)
 
-		cur, _ := collection.Find(ctx, filter, findOptions)
+		cur, err := collection.Find(ctx, filter, findOptions)
+		if err != nil {
+			log.Fatal(err)
+		}
 		defer cur.Close(ctx)
 
 		for cur.Next(ctx) {
