@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/bxcodec/faker/v3"
@@ -121,7 +123,33 @@ func main() {
 			}
 		}
 
-		return c.JSON(products)
+		page, _ := strconv.Atoi(c.Query("page", "1"))
+		var perPage int64 = 9
+		total, _ := collection.CountDocuments(ctx, filter)
+
+		findOptions.SetSkip(int64(page) - 1*perPage)
+		findOptions.SetLimit(perPage)
+
+		cur, _ := collection.Find(ctx, filter, findOptions)
+		defer cur.Close(ctx)
+
+		for cur.Next(ctx) {
+			var product Product
+
+			err := cur.Decode(&product)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			products = append(products, product)
+		}
+
+		return c.JSON(fiber.Map{
+			"data":      products,
+			"total":     total,
+			"page":      page,
+			"last_page": math.Ceil(float64(total) / float64(perPage)),
+		})
 	})
 
 	app.Listen(":3000")
