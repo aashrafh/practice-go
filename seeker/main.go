@@ -90,13 +90,13 @@ func main() {
 		filter := bson.M{}
 		findOptions := options.Find()
 
-		if s := c.Query("search"); s != "" {
+		if search := c.Query("search"); search != "" {
 			filter = bson.M{
 				"$or": []bson.M{
 					{
 						"title": bson.M{
 							"$regex": primitive.Regex{
-								Pattern: s,
+								Pattern: search,
 								Options: "i",
 							},
 						},
@@ -104,12 +104,20 @@ func main() {
 					{
 						"description": bson.M{
 							"$regex": primitive.Regex{
-								Pattern: s,
+								Pattern: search,
 								Options: "i",
 							},
 						},
 					},
 				},
+			}
+		}
+
+		if sort := c.Query("sort"); sort != "" {
+			if sort == "asc" {
+				findOptions.SetSort(bson.D{{"price", 1}})
+			} else if sort == "desc" {
+				findOptions.SetSort(bson.D{{"price", -1}})
 			}
 		}
 
