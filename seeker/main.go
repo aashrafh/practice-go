@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
 	"github.com/bxcodec/faker/v3"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -23,17 +25,19 @@ type Product struct {
 }
 
 func main() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	client, _ := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
-	db := client.Database("seeker")
 
 	app := fiber.New()
 
 	app.Use(cors.New())
 
 	app.Post("/api/products/populate", func(c *fiber.Ctx) error {
-		collection := db.Collection("products")
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		collection := client.Database("seeker").Collection("products")
+		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 
 		for i := 0; i < 50; i++ {
 			collection.InsertOne(ctx, Product{
@@ -47,6 +51,33 @@ func main() {
 		return c.JSON(fiber.Map{
 			"message": "success",
 		})
+	})
+
+	app.Get("/api/products/frontend", func(c *fiber.Ctx) error {
+		collection := client.Database("seeker").Collection("products")
+		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		var products []Product
+
+		cur, err := collection.Find(ctx, bson.D{})
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer cur.Close(ctx)
+
+		for cur.Next(ctx) {
+			var product Product
+
+			err := cur.Decode(&product)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			products = append(products, product)
+		}
+
+		return c.JSON(products)
 	})
 
 	app.Listen(":3000")
